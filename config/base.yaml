@@ -55,9 +55,12 @@ properties:
   queueName:
     default: 'grading'
     envVar: QUEUE_NAME
-  queueUrl:
+  sqsQueueUrl:
     default: null
-    envVar: QUEUE_URL
+    envVar: SQS_QUEUE_URL
+  rabbitMqQueueHost:
+    default: 'amqp://localhost'
+    envVar: RABBITMQ_QUEUE_HOST
   defaultTimeout:
     default: 30
     envVar: DEFAULT_TIMEOUT

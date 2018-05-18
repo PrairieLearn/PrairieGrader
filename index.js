@@ -56,7 +56,7 @@ async.series([
         queueProvider.init((err) => {
           if (ERR(err, callback)) return;
           callback(null);
-        })
+      });
     },
     (callback) => {
         if (!config.useDatabase || !config.reportLoad) return callback(null);

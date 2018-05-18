@@ -49,6 +49,9 @@ properties:
     envVar: HEALTH_CHECK_INTERVAL
 
   # Queue config
+  queueType:
+    default: 'rabbitmq'
+    envVar: QUEUE_TYPE
   queueName:
     default: 'grading'
     envVar: QUEUE_NAME

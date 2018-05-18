@@ -10,3 +10,5 @@ properties:
     default: true
   reportLoad:
     default: true
+  queueType:
+    default: 'sqs'

@@ -17,6 +17,7 @@ const configManager = require('./lib/config');
 const config = require('./lib/config').config;
 const healthCheck = require('./lib/healthCheck');
 const pullImages = require('./lib/pullImages');
+const queueProvider = require('./lib/queueProvider');
 const receiveFromQueue = require('./lib/receiveFromQueue');
 const timeReporter = require('./lib/timeReporter');
 const util = require('./lib/util');
@@ -52,6 +53,12 @@ async.series([
         });
     },
     (callback) => {
+        queueProvider.init((err) => {
+          if (ERR(err, callback)) return;
+          callback(null);
+        })
+    },
+    (callback) => {
         if (!config.useDatabase || !config.reportLoad) return callback(null);
         load.init(config.maxConcurrentJobs);
         callback(null);
@@ -70,21 +77,23 @@ async.series([
             callback(null);
         });
     },
-    () => {
+    (callback) => {
         globalLogger.info('Initialization complete; beginning to process jobs');
-        const sqs = new AWS.SQS();
         for (let i = 0; i < config.maxConcurrentJobs; i++) {
-          async.forever((next) => {
-              receiveFromQueue(sqs, config.queueUrl, (job, fail, success) => {
-                  handleJob(job, (err) => {
-                      if (ERR(err, fail)) return;
-                      success();
-                  });
-              }, (err) => {
-                  if (ERR(err, (err) => globalLogger.error(err)));
-                  next();
-              });
-          });
+            queueProvider.provideQueue((err, queue) => {
+                if (ERR(err, callback)) return;
+                async.forever((next) => {
+                    receiveFromQueue(queue, (job, fail, success) => {
+                        handleJob(job, (err) => {
+                            if (ERR(err, fail)) return;
+                            success();
+                        });
+                    }, (err) => {
+                        if (ERR(err, (err) => globalLogger.error(err)));
+                        next();
+                    });
+                });
+            });
         }
     }
 ], (err) => {

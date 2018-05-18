@@ -20,7 +20,10 @@
   "dependencies": {
     "@prairielearn/prairielib": "^1.1.0",
     "ajv": "^5.5.2",
+    "amqplib": "^0.5.2",
     "async": "^2.6.1",
+    "ajv": "^5.2.3",
+    "async": "^2.5.0",
     "async-stacktrace": "0.0.2",
     "aws-sdk": "^2.243.1",
     "byline": "^5.0.0",

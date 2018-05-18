@@ -97,7 +97,7 @@ async.series([
         }
     }
 ], (err) => {
-    globalLogger.error(String(err));
+    globalLogger.error(err);
     process.exit(1);
 });
 

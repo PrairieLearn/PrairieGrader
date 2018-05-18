@@ -8,8 +8,8 @@
     "parserOptions": {
         "ecmaFeatures": {
           "experimentalObjectRestSpread": true
-
-        }
+        },
+        "ecmaVersion": 2017
     },
     "rules": {
         "handle-callback-err": "error",

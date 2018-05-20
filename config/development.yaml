@@ -2,3 +2,7 @@ parent: base
 properties:
   useConsoleLoggingForJobs:
     default: true
+  queueType:
+    default: 'rabbitmq'
+  fileStore:
+    default: 'disk'

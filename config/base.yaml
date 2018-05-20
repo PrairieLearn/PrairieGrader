@@ -50,7 +50,7 @@ properties:
 
   # Queue config
   queueType:
-    default: 'rabbitmq'
+    default: 'sqs'
     envVar: QUEUE_TYPE
   queueName:
     default: 'grading'
@@ -64,6 +64,11 @@ properties:
   defaultTimeout:
     default: 30
     envVar: DEFAULT_TIMEOUT
+
+  # Where to fetch files from
+  fileStore:
+    default: 's3'
+    envVar: FILE_STORE
 
   # Postgres config
   postgresqlHost:

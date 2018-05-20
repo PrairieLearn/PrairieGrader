@@ -1,0 +1,10 @@
+# blacklist all
+*
+
+# whitelist things to copy
+!lib/
+!index.js
+!config/
+!tests/
+!package.json
+!package-lock.json

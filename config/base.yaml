@@ -17,6 +17,14 @@ properties:
   useConsoleLoggingForJobs:
     default: false
     envVar: USE_CONSOLE_LOGGING_FOR_JOBS
+  # Controls which log levels are printed for the global logger
+  globalLoggerLevel:
+    default: info
+    envVar: GLOBAL_LOGGER_LEVEL
+  # Controls which log levels are printed for the individual job loggers
+  jobLoggerLevel:
+    default: info
+    envVar: JOB_LOGGER_LEVEL
   useImagePreloading:
     default: false
     envVar: USE_IMAGE_PRELOADING

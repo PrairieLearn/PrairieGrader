@@ -10,3 +10,7 @@ properties:
     default: true
   reportLoad:
     default: true
+  globalLoggerLevel:
+    default: verbose
+  jobLoggerLevel:
+    default: verbose

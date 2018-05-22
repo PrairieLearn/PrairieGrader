@@ -27,8 +27,8 @@ async.series([
     (callback) => {
         configManager.loadConfig((err) => {
             if (ERR(err, callback)) return;
-            globalLogger.info('Config loaded:');
-            globalLogger.info(JSON.stringify(config, null, 2));
+            globalLogger.verbose(JSON.stringify(config, null, 2));
+            globalLogger.info('Loaded config; initializing...');
             callback(null);
         });
     },
@@ -42,13 +42,13 @@ async.series([
             max: 2,
             idleTimeoutMillis: 30000,
         };
-        globalLogger.info('Connecting to database ' + pgConfig.user + '@' + pgConfig.host + ':' + pgConfig.database);
+        globalLogger.verbose('Connecting to database ' + pgConfig.user + '@' + pgConfig.host + ':' + pgConfig.database);
         var idleErrorHandler = function(err) {
             globalLogger.error('idle client error', err);
         };
         sqldb.init(pgConfig, idleErrorHandler, function(err) {
             if (ERR(err, callback)) return;
-            globalLogger.info('Successfully connected to database');
+            globalLogger.verbose('Successfully connected to database');
             callback(null);
         });
     },
@@ -107,7 +107,7 @@ function handleJob(job, done) {
     const fileStore = fileStoreProvider.provideFileStore(job);
 
     const logger = jobLogger(fileStore);
-    globalLogger.info(`Logging job ${job.jobId} to output.log in ${fileStore.getName()}`);
+    globalLogger.verbose(`Logging job ${job.jobId} to output.log in ${fileStore.getName()}`);
 
     const info = {
         docker: new Docker(),
@@ -116,8 +116,8 @@ function handleJob(job, done) {
         job,
     };
 
-    logger.info(`Running job ${job.jobId}!`);
-    logger.info(job);
+    logger.info(`Running job ${job.jobId}`);
+    logger.verbose(job);
 
     async.auto({
         context: (callback) => context(info, callback),
@@ -164,7 +164,7 @@ function reportReceived(info, callback) {
             logger,
         }
     } = info;
-    logger.info('Pinging webhook to acknowledge that job was received');
+    logger.verbose('Pinging webhook to acknowledge that job was received');
     const webhookData = {
         event: 'job_received',
         job_id: job.jobId,
@@ -193,7 +193,7 @@ function initDocker(info, callback) {
 
     async.series([
         (callback) => {
-            logger.info('Pinging docker');
+            logger.verbose('Pinging docker');
             docker.ping((err) => {
                 if (ERR(err, callback)) return;
                 callback(null);
@@ -244,7 +244,7 @@ function initFiles(info, callback) {
 
     async.series([
         (callback) => {
-            logger.info('Setting up temp file');
+            logger.verbose('Setting up temp file');
             tmp.file((err, file, fd, cleanup) => {
                 if (ERR(err, callback)) return;
                 jobArchiveFile = file;
@@ -254,7 +254,7 @@ function initFiles(info, callback) {
         },
         (callback) => {
             if (config.jobFilesVolumeName && config.jobFilesVolumePath) {
-                logger.info(`Emptying job files directory: ${config.jobFilesVolumePath}`);
+                logger.verbose(`Emptying job files directory: ${config.jobFilesVolumePath}`);
                 fs.emptyDir(config.jobFilesVolumePath, (err) => {
                     if (ERR(err, callback)) return;
                     files.tempDir = config.jobFilesVolumePath;
@@ -262,7 +262,7 @@ function initFiles(info, callback) {
                     callback(null);
                 });
             } else {
-                logger.info('Setting up temp dir');
+                logger.verbose('Setting up temp dir');
                 tmp.dir({
                     prefix: `job_${jobId}_`,
                     unsafeCleanup: true,
@@ -275,7 +275,7 @@ function initFiles(info, callback) {
             }
         },
         (callback) => {
-            logger.info('Loading job files');
+            logger.verbose('Loading job files');
             const stream = fs.createWriteStream(jobArchiveFile);
             fileStore.getFile('job.tar.gz', stream, (err) => {
                 if (ERR(err, callback)) return;
@@ -283,7 +283,7 @@ function initFiles(info, callback) {
             });
         },
         (callback) => {
-            logger.info('Unzipping files');
+            logger.verbose('Unzipping files');
             exec(`tar -xf ${jobArchiveFile} -C ${files.tempDir}`, (err) => {
                 if (ERR(err, callback)) return;
                 jobArchiveFileCleanup();
@@ -291,7 +291,7 @@ function initFiles(info, callback) {
             });
         },
         (callback) => {
-            logger.info('Making entrypoint executable');
+            logger.verbose('Making entrypoint executable');
             exec(`chmod +x ${path.join(files.tempDir, entrypoint.slice(6))}`, (err) => {
                 if (err) {
                     logger.error('Could not make file executable; continuing execution anyways');
@@ -386,7 +386,7 @@ function runJob(info, callback) {
         (container, callback) => {
             container.start((err) => {
                 if (ERR(err, callback)) return;
-                logger.info('Container started!');
+                logger.verbose('Started container');
                 callback(null, container);
             });
         },
@@ -402,7 +402,7 @@ function runJob(info, callback) {
                 results.timedOut = true;
                 container.kill();
             }, jobTimeout * 1000);
-            logger.info('Waiting for container to complete');
+            logger.info('Waiting for container to complete...');
             container.wait((err) => {
                 clearTimeout(timeoutId);
                 if (ERR(err, callback)) return;
@@ -435,7 +435,7 @@ function runJob(info, callback) {
             });
         },
         (callback) => {
-            logger.info('Reading course results');
+            logger.verbose('Reading course results');
             // Now that the job has completed, let's extract the results
             // First up: results.json
             if (results.succeeded) {
@@ -518,7 +518,7 @@ function uploadResults(info, callback) {
     async.series([
         (callback) => {
             // Now we can send the results back to S3
-            logger.info('Storing results.json to file store');
+            logger.verbose('Storing results.json to file store');
             const buffer = new Buffer(JSON.stringify(results, null, '  '), 'binary');
             fileStore.putFileBuffer('results.json', buffer, (err) => {
                 if (ERR(err, callback)) return;
@@ -529,7 +529,7 @@ function uploadResults(info, callback) {
             if (!webhookUrl) return callback(null);
             // Let's send the results back to PrairieLearn now; the archive will
             // be uploaded later
-            logger.info('Pinging webhook with results');
+            logger.verbose('Pinging webhook with results');
             const webhookResults = {
                 data: results,
                 event: 'grading_result',
@@ -562,7 +562,7 @@ function uploadArchive(results, callback) {
     async.series([
         // Now we can upload the archive of the /grade directory
         (callback) => {
-            logger.info('Creating temp file for archive');
+            logger.verbose('Creating temp file for archive');
             tmp.file((err, file, fd, cleanup) => {
                 if (ERR(err, callback)) return;
                 tempArchive = file;
@@ -571,14 +571,14 @@ function uploadArchive(results, callback) {
             });
         },
         (callback) => {
-            logger.info('Building archive');
+            logger.verbose('Building archive');
             exec(`tar -zcf ${tempArchive} ${tempDir}`, (err) => {
                 if (ERR(err, callback)) return;
                 callback(null);
             });
         },
         (callback) => {
-            logger.info('Storing archive.tar.gz to file store');
+            logger.verbose('Storing archive.tar.gz to file store');
             const stream = fs.createReadStream(tempArchive);
             fileStore.putFileReadStream('archive.tar.gz', stream, (err) => {
                 if (ERR(err, callback)) return;

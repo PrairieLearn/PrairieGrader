@@ -8,7 +8,7 @@ const { exec } = require('child_process');
 const path = require('path');
 const request = require('request');
 const byline = require('byline');
-const { sqldb } = require('@prairielearn/prairielib');
+const sqldb = require('@prairielearn/prairielib/sql-db');
 const sanitizeObject = require('@prairielearn/prairielib').util.sanitizeObject;
 
 const globalLogger = require('./lib/logger');

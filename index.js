@@ -3,7 +3,6 @@ const fs = require('fs-extra');
 const async = require('async');
 const tmp = require('tmp');
 const Docker = require('dockerode');
-const AWS = require('aws-sdk');
 const { exec } = require('child_process');
 const path = require('path');
 const request = require('request');
@@ -17,7 +16,8 @@ const configManager = require('./lib/config');
 const config = require('./lib/config').config;
 const healthCheck = require('./lib/healthCheck');
 const pullImages = require('./lib/pullImages');
-const queueProvider = require('./lib/queueProvider');
+const queueProvider = require('./lib/queue/queueProvider');
+const fileStoreProvider = require('./lib/fileStore/fileStoreProvider');
 const receiveFromQueue = require('./lib/receiveFromQueue');
 const timeReporter = require('./lib/timeReporter');
 const util = require('./lib/util');
@@ -104,17 +104,14 @@ async.series([
 function handleJob(job, done) {
     load.startJob();
 
-    const loggerOptions = {
-        bucket: job.s3Bucket,
-        rootKey: job.s3RootKey
-    };
+    const fileStore = fileStoreProvider.provideFileStore(job);
 
-    const logger = jobLogger(loggerOptions);
-    globalLogger.info(`Logging job ${job.jobId} to S3: ${job.s3Bucket}/${job.s3RootKey}`);
+    const logger = jobLogger(fileStore);
+    globalLogger.info(`Logging job ${job.jobId} to output.log in ${fileStore.getName()}`);
 
     const info = {
         docker: new Docker(),
-        s3: new AWS.S3(),
+        fileStore,
         logger,
         job,
     };
@@ -234,11 +231,9 @@ function initFiles(info, callback) {
     const {
         context: {
             logger,
-            s3,
+            fileStore,
             job: {
                 jobId,
-                s3Bucket,
-                s3RootKey,
                 entrypoint
             }
         }
@@ -271,16 +266,11 @@ function initFiles(info, callback) {
         },
         (callback) => {
             logger.info('Loading job files');
-            const params = {
-                Bucket: s3Bucket,
-                Key: `${s3RootKey}/job.tar.gz`
-            };
-            s3.getObject(params).createReadStream()
-            .on('error', (err) => {
-                return ERR(err, callback);
-            }).on('end', () => {
+            const stream = fs.createWriteStream(jobArchiveFile);
+            fileStore.getFile('job.tar.gz', stream, (err) => {
+                if (ERR(err, callback)) return;
                 callback(null);
-            }).pipe(fs.createWriteStream(jobArchiveFile));
+            });
         },
         (callback) => {
             logger.info('Unzipping files');
@@ -431,8 +421,6 @@ function runJob(info, callback) {
             });
         },
         (callback) => {
-            // We made it throught the Docker danger zone!
-            clearTimeout(globalJobTimeoutId);
             logger.info('Reading course results');
             // Now that the job has completed, let's extract the results
             // First up: results.json
@@ -475,6 +463,9 @@ function runJob(info, callback) {
             }
         }
     ], (err) => {
+        // We made it throught the Docker danger zone!
+        clearTimeout(globalJobTimeoutId);
+
         if (ERR(err, (err) => logger.error(err)));
 
         // If we somehow eventually get here after exceeding the global tieout,
@@ -500,11 +491,9 @@ function uploadResults(info, callback) {
     const {
         context: {
             logger,
-            s3,
+            fileStore,
             job: {
                 jobId,
-                s3Bucket,
-                s3RootKey,
                 webhookUrl,
                 csrfToken
             }
@@ -515,13 +504,9 @@ function uploadResults(info, callback) {
     async.series([
         (callback) => {
             // Now we can send the results back to S3
-            logger.info(`Uploading results.json to S3 bucket ${s3Bucket}/${s3RootKey}`);
-            const params = {
-                Bucket: s3Bucket,
-                Key: `${s3RootKey}/results.json`,
-                Body: new Buffer(JSON.stringify(results, null, '  '), 'binary')
-            };
-            s3.putObject(params, (err) => {
+            logger.info('Storing results.json to file store');
+            const buffer = new Buffer(JSON.stringify(results, null, '  '), 'binary');
+            fileStore.putFileBuffer('results.json', buffer, (err) => {
                 if (ERR(err, callback)) return;
                 callback(null);
             });
@@ -552,11 +537,7 @@ function uploadArchive(results, callback) {
     const {
         context: {
             logger,
-            s3,
-            job: {
-                s3Bucket,
-                s3RootKey
-            }
+            fileStore,
         },
         initFiles: {
             tempDir
@@ -583,13 +564,9 @@ function uploadArchive(results, callback) {
             });
         },
         (callback) => {
-            logger.info(`Uploading archive to s3 bucket ${s3Bucket}/${s3RootKey}`);
-            const params = {
-                Bucket: s3Bucket,
-                Key: `${s3RootKey}/archive.tar.gz`,
-                Body: fs.createReadStream(tempArchive)
-            };
-            s3.upload(params, (err) => {
+            logger.info('Storing archive.tar.gz to file store');
+            const stream = fs.createReadStream(tempArchive);
+            fileStore.putFileReadStream('archive.tar.gz', stream, (err) => {
                 if (ERR(err, callback)) return;
                 callback(null);
             });

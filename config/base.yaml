@@ -66,9 +66,9 @@ properties:
   sqsQueueUrl:
     default: null
     envVar: SQS_QUEUE_URL
-  rabbitMqQueueHost:
+  rabbitMqHost:
     default: 'amqp://localhost'
-    envVar: RABBITMQ_QUEUE_HOST
+    envVar: RABBITMQ_HOST
   defaultTimeout:
     default: 30
     envVar: DEFAULT_TIMEOUT

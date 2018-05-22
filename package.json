@@ -18,11 +18,9 @@
   },
   "homepage": "https://github.com/PrairieLearn/PrairieGrader#readme",
   "dependencies": {
-    "@prairielearn/prairielib": "^1.1.0",
-    "ajv": "^5.5.2",
-    "amqplib": "^0.5.2",
-    "async": "^2.6.1",
+    "@prairielearn/prairielib": "^1.5.0",
     "ajv": "^5.2.3",
+    "amqplib": "^0.5.2",
     "async": "^2.5.0",
     "async-stacktrace": "0.0.2",
     "aws-sdk": "^2.243.1",

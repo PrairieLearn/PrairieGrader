@@ -87,13 +87,13 @@ properties:
 
   # Postgres config
   postgresqlHost:
-    default: 'localhost'
+    default: localhost
     envVar: PG_HOST
   postgresqlDatabase:
-    default: 'postgres'
+    default: postgres
     envVar: PG_DATABASE
   postgresqlUser:
-    default: null
+    default: postgres
     envVar: PG_USER
   postgresqlPassword:
     default: null

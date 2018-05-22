@@ -74,6 +74,17 @@ properties:
     default: '/jobs'
     envVar: FILE_STORE_PATH
 
+  # If this is set to something non-null, then PG will write the job files into
+  # the path specified by `jobFilesVolumePath`, which is assumed to be the
+  # mount location of the `jobFilesVolumeName` volume. When running the job
+  # container, that volume will then be mounted as /grade.
+  jobFilesVolumeName:
+    default: null
+    envVar: JOB_FILES_VOLUME_NAME
+  jobFilesVolumePath:
+    default: null
+    envVar: JOB_FILES_VOLUME_PATH
+
   # Postgres config
   postgresqlHost:
     default: 'localhost'

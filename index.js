@@ -253,16 +253,26 @@ function initFiles(info, callback) {
             });
         },
         (callback) => {
-            logger.info('Setting up temp dir');
-            tmp.dir({
-                prefix: `job_${jobId}_`,
-                unsafeCleanup: true,
-            }, (err, dir, cleanup) => {
-                if (ERR(err, callback)) return;
-                files.tempDir = dir;
-                files.tempDirCleanup = cleanup;
-                callback(null);
-            });
+            if (config.jobFilesVolumeName && config.jobFilesVolumePath) {
+                logger.info(`Emptying job files directory: ${config.jobFilesVolumePath}`);
+                fs.emptyDir(config.jobFilesVolumePath, (err) => {
+                    if (ERR(err, callback)) return;
+                    files.tempDir = config.jobFilesVolumePath;
+                    files.tempDirCleanup = () => {}; // NOOP
+                    callback(null);
+                });
+            } else {
+                logger.info('Setting up temp dir');
+                tmp.dir({
+                    prefix: `job_${jobId}_`,
+                    unsafeCleanup: true,
+                }, (err, dir, cleanup) => {
+                    if (ERR(err, callback)) return;
+                    files.tempDir = dir;
+                    files.tempDirCleanup = cleanup;
+                    callback(null);
+                });
+            }
         },
         (callback) => {
             logger.info('Loading job files');
@@ -330,6 +340,12 @@ function runJob(info, callback) {
 
     async.waterfall([
         (callback) => {
+            let bind;
+            if (config.jobFilesVolumeName && config.jobFilesVolumePath) {
+                bind = `${config.jobFilesVolumeName}:/grade`;
+            } else {
+                bind = `${tempDir}:/grade`;
+            }
             docker.createContainer({
                 Image: image,
                 AttachStdout: true,
@@ -337,9 +353,7 @@ function runJob(info, callback) {
                 Tty: true,
                 NetworkDisabled: !jobEnableNetworking,
                 HostConfig: {
-                    Binds: [
-                        `${tempDir}:/grade`
-                    ],
+                    Binds: [ bind ],
                     Memory: 1 << 30, // 1 GiB
                     MemorySwap: 1 << 30, // same as Memory, so no access to swap
                     KernelMemory: 1 << 29, // 512 MiB

@@ -43,10 +43,10 @@ async.series([
             idleTimeoutMillis: 30000,
         };
         globalLogger.verbose('Connecting to database ' + pgConfig.user + '@' + pgConfig.host + ':' + pgConfig.database);
-        var idleErrorHandler = function(err) {
+        var idleErrorHandler = (err) => {
             globalLogger.error('idle client error', err);
         };
-        sqldb.init(pgConfig, idleErrorHandler, function(err) {
+        sqldb.init(pgConfig, idleErrorHandler, (err) => {
             if (ERR(err, callback)) return;
             globalLogger.verbose('Successfully connected to database');
             callback(null);
@@ -125,9 +125,9 @@ function handleJob(job, done) {
         initDocker: ['context', initDocker],
         initFiles: ['context', initFiles],
         runJob: ['initDocker', 'initFiles', runJob],
-        uploadResults: ['runJob', uploadResults],
-        uploadArchive: ['runJob', uploadArchive],
-        cleanup: ['uploadResults', 'uploadArchive', function(results, callback) {
+        storeResults: ['runJob', storeResults],
+        storeArchive: ['runJob', storeArchive],
+        cleanup: ['uploadResults', 'uploadArchive', (results, callback) => {
             logger.info('Removing temporary directories');
             results.initFiles.tempDirCleanup();
             callback(null);
@@ -165,15 +165,10 @@ function reportReceived(info, callback) {
         }
     } = info;
     logger.verbose('Pinging webhook to acknowledge that job was received');
-    const webhookData = {
-        event: 'job_received',
-        job_id: job.jobId,
-        data: {
-            received_time: receivedTime,
-        },
-        __csrf_token: job.csrfToken,
+    const data = {
+        received_time: receivedTime,
     };
-    request.post({method: 'POST', url: job.webhookUrl, json: true, body: webhookData}, function (err, _response, _body) {
+    sendWebhookEvent(job, 'job_received', data, (err) => {
         // We don't want to fail the job if this notification fails
         if (ERR(err, (err) => logger.error(err)));
         callback(null);
@@ -501,23 +496,19 @@ function runJob(info, callback) {
     });
 }
 
-function uploadResults(info, callback) {
+function storeResults(info, callback) {
     const {
         context: {
             logger,
             fileStore,
-            job: {
-                jobId,
-                webhookUrl,
-                csrfToken
-            }
+            job,
         },
         runJob: results
     } = info;
 
     async.series([
         (callback) => {
-            // Now we can send the results back to S3
+            // Now we can write the results back to the file store
             logger.verbose('Storing results.json to file store');
             const buffer = new Buffer(JSON.stringify(results, null, '  '), 'binary');
             fileStore.putFileBuffer('results.json', buffer, (err) => {
@@ -526,17 +517,11 @@ function uploadResults(info, callback) {
             });
         },
         (callback) => {
-            if (!webhookUrl) return callback(null);
+            if (!job.webhookUrl) return callback(null);
             // Let's send the results back to PrairieLearn now; the archive will
-            // be uploaded later
+            // be stored
             logger.verbose('Pinging webhook with results');
-            const webhookResults = {
-                data: results,
-                event: 'grading_result',
-                job_id: jobId,
-                __csrf_token: csrfToken,
-            };
-            request.post({method: 'POST', url: webhookUrl, json: true, body: webhookResults}, function (err, _response, _body) {
+            sendWebhookEvent(job, 'grading_result', results, (err) => {
                 if (ERR(err, callback)) return;
                 callback(null);
             });
@@ -547,7 +532,7 @@ function uploadResults(info, callback) {
     });
 }
 
-function uploadArchive(results, callback) {
+function storeArchive(results, callback) {
     const {
         context: {
             logger,
@@ -560,7 +545,7 @@ function uploadArchive(results, callback) {
 
     let tempArchive, tempArchiveCleanup;
     async.series([
-        // Now we can upload the archive of the /grade directory
+        // Now we can store the archive of the /grade directory
         (callback) => {
             logger.verbose('Creating temp file for archive');
             tmp.file((err, file, fd, cleanup) => {
@@ -588,6 +573,24 @@ function uploadArchive(results, callback) {
     ], (err) => {
         if (ERR(err, callback)) return;
         tempArchiveCleanup && tempArchiveCleanup();
+        callback(null);
+    });
+}
+
+function sendWebhookEvent(job, event, data, callback) {
+    const {
+        jobId,
+        webhookUrl,
+        csrfToken
+    } = job;
+    const webhookData = {
+        data,
+        event,
+        job_id: jobId,
+        __csrf_token: csrfToken,
+    };
+    request.post({method: 'POST', url: webhookUrl, json: true, body: webhookData}, (err) => {
+        if (ERR(err, callback)) return;
         callback(null);
     });
 }

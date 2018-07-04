@@ -1,0 +1,20 @@
+parent: base
+properties:
+  useDatabase:
+    default: true
+  useConsoleLoggingForJobs:
+    default: true
+  queueType:
+    default: 'rabbitmq'
+  fileStoreType:
+    default: 'disk'
+  fileStorePath:
+    default: '/jobs'
+  # Because we have to use a single volume to move files between this
+  # container and the job container, we can only run one job at a time
+  maxConcurrentJobs:
+    default: 1
+  globalLoggerLevel:
+    default: 'info'
+  jobLoggerLevel:
+    default: 'info'

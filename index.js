@@ -127,7 +127,7 @@ function handleJob(job, done) {
         runJob: ['initDocker', 'initFiles', runJob],
         storeResults: ['runJob', storeResults],
         storeArchive: ['runJob', storeArchive],
-        cleanup: ['uploadResults', 'uploadArchive', (results, callback) => {
+        cleanup: ['storeResults', 'storeArchive', (results, callback) => {
             logger.info('Removing temporary directories');
             results.initFiles.tempDirCleanup();
             callback(null);

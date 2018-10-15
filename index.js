@@ -75,7 +75,7 @@ async.series([
         const sqs = new AWS.SQS();
         for (let i = 0; i < config.maxConcurrentJobs; i++) {
           async.forever((next) => {
-              receiveFromQueue(sqs, config.queueUrl, (job, fail, success) => {
+              receiveFromQueue(sqs, config.jobsQueueUrl, (job, fail, success) => {
                   handleJob(job, (err) => {
                       if (ERR(err, fail)) return;
                       success();
@@ -158,16 +158,21 @@ function reportReceived(info, callback) {
             logger,
         }
     } = info;
-    logger.info('Pinging webhook to acknowledge that job was received');
-    const webhookData = {
+    logger.info('Sending job acknowledgement to PrairieLearn');
+
+    const sqs = new AWS.SQS();
+    const messageBody = {
+        jobId: job.jobId,
         event: 'job_received',
-        job_id: job.jobId,
         data: {
-            received_time: receivedTime,
+            receivedTime: receivedTime
         },
-        __csrf_token: job.csrfToken,
     };
-    request.post({method: 'POST', url: job.webhookUrl, json: true, body: webhookData}, function (err, _response, _body) {
+    const params = {
+        QueueUrl: QUEUE_URL,
+        MessageBody: JSON.stringify(messageBody),
+    };
+    sqs.sendMessage(params, (err) => {
         // We don't want to fail the job if this notification fails
         if (ERR(err, (err) => logger.error(err)));
         callback(null);
@@ -495,8 +500,6 @@ function uploadResults(info, callback) {
                 jobId,
                 s3Bucket,
                 s3RootKey,
-                webhookUrl,
-                csrfToken
             }
         },
         runJob: results
@@ -517,17 +520,20 @@ function uploadResults(info, callback) {
             });
         },
         (callback) => {
-            if (!webhookUrl) return callback(null);
             // Let's send the results back to PrairieLearn now; the archive will
             // be uploaded later
-            logger.info('Pinging webhook with results');
-            const webhookResults = {
-                data: results,
+            logger.info('Sending results to PrairieLearn with results');
+            const sqs = new AWS.SQS();
+            const messageBody = {
+                jobId,
                 event: 'grading_result',
-                job_id: jobId,
-                __csrf_token: csrfToken,
+                data: results,
             };
-            request.post({method: 'POST', url: webhookUrl, json: true, body: webhookResults}, function (err, _response, _body) {
+            const params = {
+                QueueUrl: QUEUE_URL,
+                MessageBody: JSON.stringify(messageBody),
+            };
+            sqs.sendMessage(params, (err) => {
                 if (ERR(err, callback)) return;
                 callback(null);
             });

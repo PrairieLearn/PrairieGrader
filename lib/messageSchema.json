@@ -36,13 +36,5 @@
             "description": "The root key for th job's files.",
             "type": "string"
         },
-        "webhookUrl": {
-            "description": "The URL to send results to.",
-            "type": "string"
-        },
-        "csrfToken": {
-            "description": "The CSRF token to pass when sending results to the webhook.",
-            "type": "string"
-        }
     }
 }

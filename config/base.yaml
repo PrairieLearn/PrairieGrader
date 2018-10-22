@@ -50,13 +50,13 @@ properties:
 
   # Queue config
   jobsQueueName:
-    default: 'grading'
+    default: 'grading_jobs_dev'
     envVar: JOBS_QUEUE_NAME
   jobsQueueUrl:
     default: null
     envVar: JOBS_QUEUE_URL
   resultsQueueName:
-    default: 'grading'
+    default: 'grading_results_dev'
     envVar: RESULTS_QUEUE_NAME
   resultsQueueUrl:
     default: null

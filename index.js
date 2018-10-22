@@ -527,8 +527,15 @@ function uploadResults(info, callback) {
             const messageBody = {
                 jobId,
                 event: 'grading_result',
-                data: results,
             };
+
+            // The SQS max message size is 256KB; if our results payload is
+            // larger than 250KB, we won't send results via this and will
+            // instead rely on PL fetching them via S3.
+            if (JSON.stringify(results).length <= 250 * 1024) {
+                messageBody.data = results;
+            }
+
             const params = {
                 QueueUrl: QUEUE_URL,
                 MessageBody: JSON.stringify(messageBody),

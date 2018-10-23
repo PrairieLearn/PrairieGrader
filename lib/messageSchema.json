@@ -35,6 +35,6 @@
         "s3RootKey": {
             "description": "The root key for th job's files.",
             "type": "string"
-        },
+        }
     }
 }

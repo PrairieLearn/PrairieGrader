@@ -6,7 +6,6 @@ const Docker = require('dockerode');
 const AWS = require('aws-sdk');
 const { exec } = require('child_process');
 const path = require('path');
-const request = require('request');
 const byline = require('byline');
 const { sqldb } = require('@prairielearn/prairielib');
 const sanitizeObject = require('@prairielearn/prairielib').util.sanitizeObject;
@@ -169,7 +168,7 @@ function reportReceived(info, callback) {
         },
     };
     const params = {
-        QueueUrl: QUEUE_URL,
+        QueueUrl: config.resultsQueueUrl,
         MessageBody: JSON.stringify(messageBody),
     };
     sqs.sendMessage(params, (err) => {
@@ -326,6 +325,7 @@ function runJob(info, callback) {
     let jobEnableNetworking = enableNetworking || false;
 
     let jobFailed = false;
+    let globalJobTimeoutCleared = false;
     const globalJobTimeoutId = setTimeout(() => {
         jobFailed = true;
         healthCheck.flagUnhealthy('Job timeout exceeded; Docker presumed dead.');
@@ -429,6 +429,7 @@ function runJob(info, callback) {
         (callback) => {
             // We made it throught the Docker danger zone!
             clearTimeout(globalJobTimeoutId);
+            globalJobTimeoutCleared = true;
             logger.info('Reading course results');
             // Now that the job has completed, let's extract the results
             // First up: results.json
@@ -472,6 +473,13 @@ function runJob(info, callback) {
     ], (err) => {
         if (ERR(err, (err) => logger.error(err)));
 
+        // It's possible that we get here with an error prior to the global job timeout exceeding.
+        // If that happens, Docker is still alive, but it just errored. We'll cancel
+        // the timeout here if needed.
+        if (!globalJobTimeoutCleared) {
+            clearTimeout(globalJobTimeoutId);
+        }
+
         // If we somehow eventually get here after exceeding the global tieout,
         // we should avoid calling the callback again
         if (jobFailed) {
@@ -512,7 +520,7 @@ function uploadResults(info, callback) {
             const params = {
                 Bucket: s3Bucket,
                 Key: `${s3RootKey}/results.json`,
-                Body: new Buffer(JSON.stringify(results, null, '  '), 'binary')
+                Body: Buffer.from(JSON.stringify(results, null, '  '), 'binary')
             };
             s3.putObject(params, (err) => {
                 if (ERR(err, callback)) return;
@@ -537,7 +545,7 @@ function uploadResults(info, callback) {
             }
 
             const params = {
-                QueueUrl: QUEUE_URL,
+                QueueUrl: config.resultsQueueUrl,
                 MessageBody: JSON.stringify(messageBody),
             };
             sqs.sendMessage(params, (err) => {

@@ -131,7 +131,7 @@ function handleJob(job, done) {
             callback(null);
         }]
     }, (err) => {
-        logger.info('Reducing load average, err=${err}');
+        logger.info(`Reducing load average, err=${err}`);
         load.endJob();
         logger.info('Successfully reduced load average');
         if (ERR(err, done)) return;

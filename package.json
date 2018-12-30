@@ -32,7 +32,7 @@
     "s3-streamlogger": "^1.4.0",
     "tmp": "0.0.33",
     "winston": "^3.1.0",
-    "winston-aws-cloudwatch": "^1.6.0"
+    "winston-aws-cloudwatch": "^3.0.0"
   },
   "devDependencies": {
     "eslint": "^5.11.1",

@@ -31,7 +31,7 @@
     "lodash": "^4.17.11",
     "s3-streamlogger": "^1.4.0",
     "tmp": "0.0.33",
-    "winston": "^2.4.4",
+    "winston": "^3.1.0",
     "winston-aws-cloudwatch": "^1.6.0"
   },
   "devDependencies": {

@@ -1,3 +1,4 @@
+const util = require('util');
 const ERR = require('async-stacktrace');
 const fs = require('fs-extra');
 const async = require('async');
@@ -15,6 +16,7 @@ const jobLogger = require('./lib/jobLogger');
 const configManager = require('./lib/config');
 const config = require('./lib/config').config;
 const healthCheck = require('./lib/healthCheck');
+const lifecycle = require('./lib/lifecycle');
 const pullImages = require('./lib/pullImages');
 const receiveFromQueue = require('./lib/receiveFromQueue');
 const timeReporter = require('./lib/timeReporter');
@@ -29,6 +31,9 @@ async.series([
             globalLogger.info(JSON.stringify(config, null, 2));
             callback(null);
         });
+    },
+    async () => {
+        await lifecycle.init();
     },
     (callback) => {
         if (!config.useDatabase) return callback(null);
@@ -74,6 +79,9 @@ async.series([
         load.setMaxJobs(config.maxConcurrentJobs);
         callback(null);
     },
+    async () => {
+        await lifecycle.inService();
+    },
     () => {
         globalLogger.info('Initialization complete; beginning to process jobs');
         const sqs = new AWS.SQS();
@@ -97,8 +105,11 @@ async.series([
         }
     }
 ], (err) => {
-    globalLogger.error(String(err));
-    process.exit(1);
+    globalLogger.error('Error in main loop', err);
+    util.callbackify(lifecycle.abandon)((err) => {
+        if (err) globalLogger.error('Error in lifecycle.abandon()', err);
+        process.exit(1);
+    });
 });
 
 function handleJob(job, done) {

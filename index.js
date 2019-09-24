@@ -20,7 +20,7 @@ const lifecycle = require('./lib/lifecycle');
 const pullImages = require('./lib/pullImages');
 const receiveFromQueue = require('./lib/receiveFromQueue');
 const timeReporter = require('./lib/timeReporter');
-const util = require('./lib/util');
+const dockerUtil = require('./lib/docker-util');
 const load = require('./lib/load');
 
 async.series([
@@ -224,7 +224,7 @@ function initDocker(info, callback) {
         },
         (callback) => {
             logger.info(`Pulling latest version of "${image}" image`);
-            const repository = util.parseRepositoryTag(image);
+            const repository = dockerUtil.parseRepositoryTag(image);
             const params = {
                 fromImage: repository.repository,
                 tag: repository.tag || 'latest'

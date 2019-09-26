@@ -97,7 +97,7 @@ async.series([
                       success();
                   });
               }, (err) => {
-                  if (ERR(err, (err) => globalLogger.error(err)));
+                  if (ERR(err, (err) => globalLogger.error('receive error:', err)));
                   globalLogger.info('Completed full request cycle');
                   next();
               });
@@ -105,9 +105,9 @@ async.series([
         }
     }
 ], (err) => {
-    globalLogger.error('Error in main loop', err);
+    globalLogger.error('Error in main loop:', err);
     util.callbackify(lifecycle.abandon)((err) => {
-        if (err) globalLogger.error('Error in lifecycle.abandon()', err);
+        if (err) globalLogger.error('Error in lifecycle.abandon():', err);
         process.exit(1);
     });
 });
@@ -130,8 +130,8 @@ function handleJob(job, done) {
         job,
     };
 
-    logger.info(`Running job ${job.jobId}!`);
-    logger.info(job);
+    logger.info(`Running job ${job.jobId}`);
+    logger.info('job details:', job);
 
     async.auto({
         context: (callback) => context(info, callback),
@@ -198,7 +198,7 @@ function reportReceived(info, callback) {
     };
     sqs.sendMessage(params, (err) => {
         // We don't want to fail the job if this notification fails
-        if (ERR(err, (err) => logger.error(err)));
+        if (ERR(err, (err) => logger.error('sendMessage error:', err)));
         callback(null);
     });
 }
@@ -233,14 +233,14 @@ function initDocker(info, callback) {
             docker.createImage(params, (err, stream) => {
                 if (err) {
                     logger.warn(`Error pulling "${image}" image; attempting to fall back to cached version`);
-                    logger.warn(err);
+                    logger.warn('createImage error:', err);
                 }
 
                 docker.modem.followProgress(stream, (err) => {
                     if (ERR(err, callback)) return;
                     callback(null);
                 }, (output) => {
-                    logger.info(output);
+                    logger.info('docker output:', output);
                 });
             });
         },
@@ -482,8 +482,7 @@ function runJob(info, callback) {
                             results.results = sanitizeObject(parsedResults);
                             results.succeeded = true;
                         } catch (e) {
-                            logger.error('Could not parse results.json');
-                            logger.error(e);
+                            logger.error('Could not parse results.json:', e);
                             results.succeeded = false;
                             results.message = 'Could not parse the grading results.';
                         }
@@ -500,7 +499,7 @@ function runJob(info, callback) {
             }
         }
     ], (err) => {
-        if (ERR(err, (err) => logger.error(err)));
+        if (ERR(err, (err) => logger.error('runJob error:', err)));
 
         // It's possible that we get here with an error prior to the global job timeout exceeding.
         // If that happens, Docker is still alive, but it just errored. We'll cancel

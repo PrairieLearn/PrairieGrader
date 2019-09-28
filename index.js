@@ -109,7 +109,7 @@ async.series([
     util.callbackify(lifecycle.abandonLaunch)((err) => {
         if (err) globalLogger.error('Error in lifecycle.abandon():', err);
         // pause to log errors, then exit
-        setTimeout(() => {process.exit(1)}, 1000);
+        setTimeout(() => {process.exit(1);}, 1000);
     });
 });
 

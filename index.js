@@ -106,7 +106,7 @@ async.series([
     }
 ], (err) => {
     globalLogger.error('Error in main loop:', err);
-    util.callbackify(lifecycle.abandon)((err) => {
+    util.callbackify(lifecycle.abandonLaunch)((err) => {
         if (err) globalLogger.error('Error in lifecycle.abandon():', err);
         process.exit(1);
     });

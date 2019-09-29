@@ -20,7 +20,7 @@ const lifecycle = require('./lib/lifecycle');
 const pullImages = require('./lib/pullImages');
 const receiveFromQueue = require('./lib/receiveFromQueue');
 const timeReporter = require('./lib/timeReporter');
-const dockerUtil = require('./lib/docker-util');
+const dockerUtil = require('./lib/dockerUtil');
 const load = require('./lib/load');
 
 async.series([

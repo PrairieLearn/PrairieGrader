@@ -57,7 +57,7 @@ async.series([
     },
     (callback) => {
         if (!config.useDatabase || !config.reportLoad) return callback(null);
-        load.init();
+        load.init(config.maxConcurrentJobs);
         callback(null);
     },
     (callback) => {
@@ -73,11 +73,6 @@ async.series([
             if (ERR(err, callback)) return;
             callback(null);
         });
-    },
-    (callback) => {
-        if (!config.useDatabase || !config.reportLoad) return callback(null);
-        load.setMaxJobs(config.maxConcurrentJobs);
-        callback(null);
     },
     async () => {
         await lifecycle.inService();

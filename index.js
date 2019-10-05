@@ -23,6 +23,9 @@ const timeReporter = require('./lib/timeReporter');
 const dockerUtil = require('./lib/dockerUtil');
 const load = require('./lib/load');
 
+let processTerminating = false;
+process.on('SIGTERM', () => {processTerminating = true;});
+
 async.series([
     (callback) => {
         configManager.loadConfig((err) => {
@@ -77,34 +80,34 @@ async.series([
     async () => {
         await lifecycle.inService();
     },
-    () => {
+    async () => {
         globalLogger.info('Initialization complete; beginning to process jobs');
         const sqs = new AWS.SQS();
-        for (let i = 0; i < config.maxConcurrentJobs; i++) {
-          async.forever((next) => {
-              if (!healthCheck.isHealthy()) return;
-              receiveFromQueue(sqs, config.jobsQueueUrl, (job, fail, success) => {
-                  globalLogger.info(`received ${job.jobId} from queue`);
-                  handleJob(job, (err) => {
-                      globalLogger.info(`handleJob(${job.jobId}) completed with err=${err}`);
-                      if (ERR(err, fail)) return;
-                      globalLogger.info(`handleJob(${job.jobId}) succeeded`);
-                      success();
-                  });
-              }, (err) => {
-                  if (ERR(err, (err) => globalLogger.error('receive error:', err)));
-                  globalLogger.info('Completed full request cycle');
-                  next();
-              });
-          });
-        }
-    }
+        await async.times(config.maxConcurrentJobs, async () => {
+            while (healthCheck.isHealthy() && !processTerminating) {
+                try {
+                    const r = await receiveFromQueue.receive(sqs, config.jobsQueueUrl);
+                    if (r == null) continue;
+                    const {job, receiptHandle} = r;
+                    globalLogger.info(`received ${job.jobId} from queue`);
+                    await util.promisify(handleJob)(job);
+                    await receiveFromQueue.delete(sqs, config.jobsQueueUrl, receiptHandle);
+                    globalLogger.info(`handleJob(${job.jobId}) succeeded`);
+                } catch (err) {
+                    globalLogger.info('Error processing job', err);
+                }
+            }
+        });
+    },
 ], (err) => {
-    globalLogger.error('Error in main loop:', err);
+    if (ERR(err, (err) => globalLogger.error('Error in main loop:', err)));
     util.callbackify(lifecycle.abandonLaunch)((err) => {
-        if (err) globalLogger.error('Error in lifecycle.abandon():', err);
-        // pause to log errors, then exit
-        setTimeout(() => {process.exit(1);}, 1000);
+        if (ERR(err, (err) => globalLogger.error('Error in lifecycle.abandon():', err)));
+        if (healthCheck.isHealthy()) {
+            // pause to log errors, then exit
+            setTimeout(() => {process.exit(1);}, 1000);
+        }
+        // if we are not healthy, don't exit so that we can report this fact
     });
 });
 

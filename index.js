@@ -24,7 +24,10 @@ const dockerUtil = require('./lib/dockerUtil');
 const load = require('./lib/load');
 
 let processTerminating = false;
-process.on('SIGTERM', () => {processTerminating = true;});
+process.on('SIGTERM', () => {
+    globalLogger.info('caught SIGTERM, draining jobs to exit...');
+    processTerminating = true;
+});
 
 async.series([
     (callback) => {

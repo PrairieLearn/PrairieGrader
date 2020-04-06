@@ -25,7 +25,7 @@ const load = require('./lib/load');
 
 // catch SIGTERM and exit after waiting for all current jobs to finish
 let processTerminating = false;
-process.on('SIGTERM', () => { 
+process.on('SIGTERM', () => {
     globalLogger.info('caught SIGTERM, draining jobs to exit...');
     processTerminating = true;
     (function tryToExit() {
@@ -231,10 +231,11 @@ function initDocker(info, callback) {
         },
         (callback) => {
             logger.info(`Pulling latest version of "${image}" image`);
-            const repository = dockerUtil.parseRepositoryTag(image);
+            //const repository = dockerUtil.parseRepositoryTag(image);
+            var repository = dockerUtil.DockerName(image);
             const params = {
-                fromImage: repository.repository,
-                tag: repository.tag || 'latest'
+                fromImage: repository.getRepository(),
+                tag: repository.getTag() || 'latest'
             };
 
             docker.createImage(params, (err, stream) => {

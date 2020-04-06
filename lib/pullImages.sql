@@ -10,17 +10,9 @@ WHERE q.grading_method = 'External'
 AND q.external_grading_image IS NOT NULL
 AND s.date >= (NOW() - INTERVAL '1 hour');
 
--- BLOCK select_all_images
+-- BLOCK select_test_images
 SELECT *
 FROM (
     VALUES ('prairielearn/grader-python'), ('cs125/quiz:latest'), ('nicknytko/cs199-grader:1.0.0'),
     ('mattox/haskell-prairielearn'), ('yrliu/centos7-ece220:v1')
 ) AS q(external_grading_image)
-
-
-
--- BLOCK foo
-SELECT DISTINCT q.external_grading_image
-FROM questions AS q
-WHERE q.grading_method = 'External'
-AND q.external_grading_image IS NOT NULL;

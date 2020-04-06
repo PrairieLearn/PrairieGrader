@@ -231,7 +231,6 @@ function initDocker(info, callback) {
         },
         (callback) => {
             logger.info(`Pulling latest version of "${image}" image`);
-            //const repository = dockerUtil.parseRepositoryTag(image);
             var repository = dockerUtil.DockerName(image);
             const params = {
                 fromImage: repository.getRepository(),

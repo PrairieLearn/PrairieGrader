@@ -9,10 +9,3 @@ JOIN questions AS q ON (q.id = aq.question_id)
 WHERE q.grading_method = 'External'
 AND q.external_grading_image IS NOT NULL
 AND s.date >= (NOW() - INTERVAL '1 hour');
-
--- BLOCK select_test_images
-SELECT *
-FROM (
-    VALUES ('prairielearn/grader-python'), ('cs125/quiz:latest'), ('nicknytko/cs199-grader:1.0.0'),
-    ('mattox/haskell-prairielearn'), ('yrliu/centos7-ece220:v1')
-) AS q(external_grading_image)

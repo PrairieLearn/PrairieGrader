@@ -220,6 +220,7 @@ function initDocker(info, callback) {
             }
         }
     } = info;
+    var dockerAuth = {};
 
     async.series([
         (callback) => {
@@ -230,8 +231,23 @@ function initDocker(info, callback) {
             });
         },
         (callback) => {
+            if (config.forcedRegistry) {
+                logger.info('Authenticating to docker');
+                dockerUtil.setupDockerAuth((err, auth) => {
+                    if (ERR(err, callback)) return;
+                    dockerAuth = auth;
+                    callback(null);
+                });
+            } else {
+                callback(null);
+            }
+        },
+        (callback) => {
             logger.info(`Pulling latest version of "${image}" image`);
             var repository = dockerUtil.DockerName(image);
+            if (config.forcedRegistry) {
+                repository.registry = config.forcedRegistry;
+            }
             const params = {
                 fromImage: repository.getRepository(),
                 tag: repository.getTag() || 'latest'

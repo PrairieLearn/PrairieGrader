@@ -220,7 +220,7 @@ function initDocker(info, callback) {
             }
         }
     } = info;
-    var dockerAuth = {};
+    let dockerAuth = {};
 
     async.series([
         (callback) => {
@@ -253,7 +253,7 @@ function initDocker(info, callback) {
                 tag: repository.getTag() || 'latest'
             };
 
-            docker.createImage(params, (err, stream) => {
+            docker.createImage(dockerAuth, params, (err, stream) => {
                 if (err) {
                     logger.warn(`Error pulling "${image}" image; attempting to fall back to cached version`);
                     logger.warn('createImage error:', err);

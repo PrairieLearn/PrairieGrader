@@ -28,6 +28,9 @@ properties:
   forcedRegistry:
     default: NULL
     envVar: FORCED_REGISTRY
+  parallelInitPulls:
+    default: 2
+    envVar: PARALLEL_INIT_PULLS
 
   # AWS AutoScaling lifecycle
   lifecycleHeartbeatIntervalMS:

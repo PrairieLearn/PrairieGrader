@@ -244,7 +244,7 @@ function initDocker(info, callback) {
         },
         (callback) => {
             logger.info(`Pulling latest version of "${image}" image`);
-            var repository = dockerUtil.DockerName(image);
+            var repository = new dockerUtil.DockerName(image);
             if (config.forcedRegistry) {
                 repository.registry = config.forcedRegistry;
             }

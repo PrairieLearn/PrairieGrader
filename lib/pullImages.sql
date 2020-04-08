@@ -1,11 +1,36 @@
 -- BLOCK select_recent_images
-SELECT DISTINCT q.external_grading_image
-FROM grading_jobs AS gj
-JOIN submissions AS s ON (s.id = gj.submission_id)
-JOIN variants AS v ON (v.id = s.variant_id)
-JOIN instance_questions AS iq ON (iq.id = v.instance_question_id)
-JOIN assessment_questions AS aq ON (aq.id = iq.assessment_question_id)
-JOIN questions AS q ON (q.id = aq.question_id)
-WHERE q.grading_method = 'External'
-AND q.external_grading_image IS NOT NULL
-AND s.date >= (NOW() - INTERVAL '1 hour');
+SELECT *
+FROM (
+    VALUES
+    ('alawini/cs411-neo4j'),
+    ('alawini/cs411-sql:latest'),
+    ('altonb/centos7-rpy'),
+    ('altonb/ubuntu-pyspark'),
+    ('bowmannat/javagrader'),
+    ('cs125/quiz:0.0.21'),
+    ('cs125/quiz:0.0.22'),
+    ('cs125/quiz:0.1.9'),
+    ('cs125/quiz:latest'),
+    ('dowobeha/docker-ubuntu-foma'),
+    ('eecarrier/c-and-python-v2'),
+    ('liquidh2/cs427fa18debugging'),
+    ('liquidh2/cs427fa18testing'),
+    ('mattox/clojure-prairielearn'),
+    ('mattox/haskell-prairielearn'),
+    ('mysql-test:latest'),
+    ('nicknytko/cs199-grader:1.0.0'),
+    ('prairielearn/centos7-base'),
+    ('prairielearn/centos7-base:dev'),
+    ('prairielearn/centos7-cs225'),
+    ('prairielearn/centos7-cs418:latest'),
+    ('prairielearn/centos7-java'),
+    ('prairielearn/centos7-ocaml'),
+    ('prairielearn/centos7-python'),
+    ('prairielearn/centos7-verilog'),
+    ('prairielearn/grader-python'),
+    ('prairielearn/grader-r'),
+    ('rahulr2/cs296-25-docker-image'),
+    ('stat430/pl'),
+    ('yrliu/centos7-ece220:v1'),
+    ('zmabry2/cs196-autograde')
+) AS q(external_grading_image);

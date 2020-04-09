@@ -29,7 +29,7 @@ properties:
     default: NULL
     envVar: FORCED_REGISTRY
   parallelInitPulls:
-    default: 2
+    default: 5
     envVar: PARALLEL_INIT_PULLS
 
   # AWS AutoScaling lifecycle

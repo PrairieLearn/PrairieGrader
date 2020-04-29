@@ -3,6 +3,13 @@ properties:
   maxConcurrentJobs:
     default: 5
     envVar: MAX_CONCURRENT_JOBS
+  # Override AWS default for endpoint
+  awsEndpoint:
+    default: null
+    envVar: AWS_ENDPOINT
+  hostJobsDir:
+    default: null
+    envVar: HOST_JOBS_DIR
 
   # Feature enable/disable
   useDatabase:

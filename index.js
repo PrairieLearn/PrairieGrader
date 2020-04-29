@@ -25,7 +25,7 @@ const load = require('./lib/load');
 
 // catch SIGTERM and exit after waiting for all current jobs to finish
 let processTerminating = false;
-process.on('SIGTERM', () => { 
+process.on('SIGTERM', () => {
     globalLogger.info('caught SIGTERM, draining jobs to exit...');
     processTerminating = true;
     (function tryToExit() {
@@ -90,7 +90,7 @@ async.series([
     },
     () => {
         globalLogger.info('Initialization complete; beginning to process jobs');
-        const sqs = new AWS.SQS();
+        const sqs = new AWS.SQS(config.awsServiceGlobalOptions);
         for (let i = 0; i < config.maxConcurrentJobs; i++) {
           async.forever((next) => {
               if (!healthCheck.isHealthy() || processTerminating) return;
@@ -132,7 +132,7 @@ function handleJob(job, done) {
 
     const info = {
         docker: new Docker(),
-        s3: new AWS.S3(),
+        s3: new AWS.S3(config.awsServiceGlobalOptions),
         logger,
         job,
     };
@@ -191,7 +191,7 @@ function reportReceived(info, callback) {
     } = info;
     logger.info('Sending job acknowledgement to PrairieLearn');
 
-    const sqs = new AWS.SQS();
+    const sqs = new AWS.SQS(config.awsServiceGlobalOptions);
     const messageBody = {
         jobId: job.jobId,
         event: 'job_received',
@@ -286,15 +286,30 @@ function initFiles(info, callback) {
         },
         (callback) => {
             logger.info('Setting up temp dir');
-            tmp.dir({
-                prefix: `job_${jobId}_`,
-                unsafeCleanup: true,
-            }, (err, dir, cleanup) => {
-                if (ERR(err, callback)) return;
-                files.tempDir = dir;
-                files.tempDirCleanup = cleanup;
-                callback(null);
-            });
+            if (config.hostJobsDir) {
+                files.tempDir = `/jobs/job_${jobId}`;
+                files.tempDirCleanup = function() {};
+                fs.remove(files.tempDir, () => {
+                    // Ignore errors for now
+                    fs.mkdirs(files.tempDir, (err) => {
+                        if (ERR(err, callback)) return;
+                        logger.info('HOST_JOBS_DIR is set, running as PG in docker');
+                        files.mountDir = path.resolve(path.join(config.hostJobsDir, `job_${jobId}`));
+                        callback(null);
+                    });
+                });
+            } else {
+                tmp.dir({
+                    prefix: `job_${jobId}_`,
+                    unsafeCleanup: true,
+                }, (err, dir, cleanup) => {
+                    if (ERR(err, callback)) return;
+                    files.tempDir = dir;
+                    files.mountDir = dir;
+                    files.tempDirCleanup = cleanup;
+                    callback(null);
+                });
+            }
         },
         (callback) => {
             logger.info('Loading job files');
@@ -347,7 +362,8 @@ function runJob(info, callback) {
             }
         },
         initFiles: {
-            tempDir
+            tempDir,
+            mountDir
         }
     } = info;
 
@@ -376,7 +392,7 @@ function runJob(info, callback) {
                 NetworkDisabled: !jobEnableNetworking,
                 HostConfig: {
                     Binds: [
-                        `${tempDir}:/grade`
+                        `${mountDir}:/grade`
                     ],
                     Memory: 1 << 30, // 1 GiB
                     MemorySwap: 1 << 30, // same as Memory, so no access to swap
@@ -566,7 +582,7 @@ function uploadResults(info, callback) {
             // Let's send the results back to PrairieLearn now; the archive will
             // be uploaded later
             logger.info('Sending results to PrairieLearn with results');
-            const sqs = new AWS.SQS();
+            const sqs = new AWS.SQS(config.awsServiceGlobalOptions);
             const messageBody = {
                 jobId,
                 event: 'grading_result',

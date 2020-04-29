@@ -1,0 +1,6 @@
+{
+    "postgresqlPassword": "tempPASSword1122",
+    "postgresqlHost": "postgres",
+    "externalGradingUseAws": true,
+    "awsRegion": "localstack"
+}

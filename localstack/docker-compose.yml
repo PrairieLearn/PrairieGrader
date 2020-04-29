@@ -1,0 +1,87 @@
+version: "3"
+
+services:
+  localstack:
+    image: localstack/localstack
+    healthcheck:
+      test: awslocal sns list-topics && awslocal sqs list-queues
+      interval: 3s
+      timeout: 10s
+    ports:
+      - "4566:4566"
+      - "${PORT_WEB_UI-8080}:${PORT_WEB_UI-8080}"
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - SERVICES=s3,sqs,cloudwatch,ec2,events
+      - DEFAULT_REGION=localstack
+      - EDGE_PORT=4566
+      - DEBUG=0
+      - HOST_TMP_FOLDER=${TMPDIR}
+      - DATA_DIR=/tmp/localstack/data
+      - PORT_WEB_UI=${PORT_WEB_UI- }
+      - HOSTNAME_EXTERNAL=localstack
+      - USE_SSL=0
+    env_file: .env
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"
+    networks:
+      - pl_network
+
+  postgres:
+    image: postgres
+    env_file: .env
+    stop_grace_period: 20s
+    networks:
+      - pl_network
+
+  setup-resources:
+    image: localstack/localstack
+    env_file: .env
+    volumes:
+      - $PG_DIR:/PrairieGrader
+    entrypoint: /PrairieGrader/localstack/setup_aws.sh
+    networks:
+      - pl_network
+    depends_on:
+      - localstack
+
+  prairielearn:
+    image: prairielearn/prairielearn:localstack
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      - DELAYED_START=30
+      - AWS_ENDPOINT=http://localstack:4566
+    volumes:
+      - ./pl-config.json:/PrairieLearn/config.json
+    networks:
+      - pl_network
+    depends_on:
+      - setup-resources
+
+  prairiegrader:
+    image: prairielearn/centos7-plbase
+    environment:
+      - QUEUE_NAME=grading_jobs_dev
+      - AWS_ENDPOINT=http://localstack:4566/
+      - MAX_CONCURRENT_JOBS=2
+      - USE_DATABASE=true
+      - HOST_JOBS_DIR=/hostJobs
+    env_file: .env
+    volumes:
+      - $PG_DIR:/PrairieGrader
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /hostJobs:/jobs
+    command: "/PrairieGrader/localstack/start_pg.sh"
+    networks:
+      - pl_network
+    depends_on:
+      - setup-resources
+
+networks:
+  pl_network:
+
+volumes:
+  jobs:

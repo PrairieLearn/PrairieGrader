@@ -47,7 +47,7 @@ services:
       - localstack
 
   prairielearn:
-    image: prairielearn/prairielearn:localstack
+    image: prairielearn/prairielearn
     ports:
       - "3000:3000"
     env_file: .env

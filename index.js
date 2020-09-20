@@ -249,7 +249,7 @@ function initDocker(info, callback) {
                 repository.registry = config.forcedRegistry;
             }
             const params = {
-                fromImage: repository.getRepository(),
+                fromImage: repository.getRegistryRepo(),
                 tag: repository.getTag() || 'latest'
             };
             logger.info(`Pulling image: ${JSON.stringify(params)}`);

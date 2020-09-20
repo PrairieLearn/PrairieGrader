@@ -383,10 +383,17 @@ function runJob(info, callback) {
 
     logger.info('Launching Docker container to run grading job');
 
+    var repository = new dockerUtil.DockerName(image);
+    if (config.forcedRegistry) {
+        repository.registry = config.forcedRegistry;
+    }
+    const runImage = repository.getCombined();
+    logger.info(`Run image: ${runImage}`);
+
     async.waterfall([
         (callback) => {
             docker.createContainer({
-                Image: image,
+                Image: runImage,
                 AttachStdout: true,
                 AttachStderr: true,
                 Tty: true,

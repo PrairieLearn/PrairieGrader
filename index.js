@@ -252,11 +252,12 @@ function initDocker(info, callback) {
                 fromImage: repository.getRepository(),
                 tag: repository.getTag() || 'latest'
             };
-
+            logger.info(`Pulling image: ${JSON.stringify(params)}`);
             docker.createImage(dockerAuth, params, (err, stream) => {
                 if (err) {
                     logger.warn(`Error pulling "${image}" image; attempting to fall back to cached version`);
                     logger.warn('createImage error:', err);
+                    return ERR(err, callback);
                 }
 
                 docker.modem.followProgress(stream, (err) => {

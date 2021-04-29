@@ -1,0 +1,25 @@
+version: 2
+updates:
+- package-ecosystem: npm
+  directory: "/"
+  schedule:
+    interval: monthly
+    time: "06:00"
+    timezone: America/Chicago
+  open-pull-requests-limit: 99
+  ignore:
+  - dependency-name: eslint
+    versions:
+    - 7.16.0
+    - 7.19.0
+  - dependency-name: ajv
+    versions:
+    - 7.0.2
+    - 7.0.3
+  - dependency-name: aws-sdk
+    versions:
+    - 2.820.0
+    - 2.834.0
+  - dependency-name: js-yaml
+    versions:
+    - 3.14.1
